@@ -1,0 +1,65 @@
+---
+title: "MyCourseProject"
+author: "Kenny Yang"
+date: "2017Äê9ÔÂ10ÈÕ"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(lattice)
+library(ggplot2)
+library(caret)
+```
+
+## Data Preprocessing
+
+First of all, we need to drop all the columns which have data missing. (also load the caret package, of course)
+
+```{r}
+library(readr)
+pml_training <- read_csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv")
+pml_testing <- read_csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv")
+set.seed(1234)
+training=pml_training
+nam=names(data.frame(t(na.omit(t(training)))))
+D=subset(training,select=nam)
+D=subset(D,select=-c(X1))
+```
+
+After that, slice the data into 3 folds to do the cross validation.
+
+```{r}
+folds<-createFolds(y=D$classe,k=3,returnTrain = TRUE)
+sapply(folds,length)
+```
+##Fit the boosting model
+
+Then, we need to train our model on each fold. I decided to try ¡°gbm¡± first since it is as good as random forest in most cases,
+and it costs less space. Fortunately, it works well!
+
+```{r}
+training<-D[folds[[1]],]
+testing<-D[-folds[[1]],]
+modFit1<-train(classe~.,method="gbm",data=training,verbose=FALSE)
+pred1<-predict(modFit1,newdata = testing)
+confusionMatrix(pred1,testing$classe)
+```
+
+The model accuracy for the first, second and third folds are 0.996, 0.996, and 0.998 respectively. I think that would be enough and we don't need and further tuning. We can also see that it is easy to confuse class C with class D. Class A and E are the easiest ones to classify.
+
+## Plot the model
+
+We can plot the model and see the fitting process:
+
+```{r}
+plot(modFit1)
+```
+
+After that£¬ I fit the model with the whole data set and use it to predict the 20 test cases.
+
+```{r}
+#modFit<-train(classe~.,method="gbm",data=pml_training,verbose=FALSE)
+#pred<-predict(modFit,newdata = pml_testing)
+```
+The result is: B A B A A E D B A A B C B A E E A B B B
+Thank you for reading.
